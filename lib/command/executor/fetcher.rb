@@ -18,7 +18,10 @@ module PodPrebuild
         else
           fetch_remote_cache(@config.cache_repo, @cache_branch, @config.cache_path)
         end
-        unzip_cache
+        
+        unless unzip_cache > 0
+          raise "No caches to unzip"
+        end
       end
     end
 
@@ -36,16 +39,12 @@ module PodPrebuild
 
     def fetch_remote_cache(repo, branch, dest_dir)
       Pod::UI.puts "Fetching cache from #{repo} (branch: #{branch})".green
-      if Dir.exist?(dest_dir + "/.git")
-        git("fetch origin #{branch}", can_fail: true)
-        git("checkout -f FETCH_HEAD", ignore_output: true, can_fail: true)
-        git("branch -D #{branch}", ignore_output: true, can_fail: true)
-        git("checkout -b #{branch}")
-      else
+      unless Dir.exist?(dest_dir + "/.git")
         FileUtils.rm_rf(dest_dir)
-        git_clone("--depth=1 #{repo} #{dest_dir}")
-        git("checkout #{branch}", can_fail: true)
+        git_clone("#{repo} #{dest_dir}")
       end
+      git("fetch", can_fail: true)
+      git("checkout -B #{branch} master", can_fail: true)
     end
 
     def unzip_cache
@@ -63,6 +62,7 @@ module PodPrebuild
       Parallel.each(zip_paths, in_threads: 8) do |path|
         ZipUtils.unzip(path, to_dir: @config.generated_frameworks_dir)
       end
+      zip_paths.size
     end
   end
 end
