@@ -44,7 +44,8 @@ module PodPrebuild
         git_clone("#{repo} #{dest_dir}")
       end
       git("fetch", can_fail: true)
-      git("checkout -B #{branch} master", can_fail: true)
+      git("checkout #{branch}", can_fail: true)
+      git("checkout -b #{branch} master", can_fail: true)
     end
 
     def unzip_cache
